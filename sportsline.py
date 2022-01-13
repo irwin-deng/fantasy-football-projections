@@ -5,8 +5,8 @@ Description: Downloads Fantasy Football projections from SportsLine
 
 import requests
 import pandas as pd
+import util_scripts
 from bs4 import BeautifulSoup
-
 
 def scrape(year, week, save_location="projections_{year}_{week}_sportsline.csv"):
     """
@@ -25,28 +25,12 @@ def scrape(year, week, save_location="projections_{year}_{week}_sportsline.csv")
     page = requests.get(url)
     soup = BeautifulSoup(page.text, 'html.parser')
 
-    # Get headers
-    headers_elt = soup.find("table").find("thead").find_all("th")
-    headers = []
-
-    for header in headers_elt:
-        headers.append(header.contents[0].contents[0])
+    table = soup.find("table")
     
-    # Get contents
-    table_rows = soup.find("table").find("tbody").find_all("tr")
-    rows = []
-
-    for table_row in table_rows:
-        row = []
-
-        row_cells = table_row.find_all("td")
-        for row_cell in row_cells:
-            row.append(row_cell.contents[0])
-
-        rows.append(row)
+    # Convert to DataFrame
+    df = util_scripts.get_dataframe_from_simple_table(table)
     
     # Save to CSV
-    df = pd.DataFrame(rows, columns=headers)
-    df.to_csv(path_or_buf=save_location.format(year=year, week=week), index=False)
+    df.to_csv(path_or_buf=save_location.format(year=year, week=week), index=False, na_rep='-')
     
     return df
