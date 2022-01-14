@@ -25,10 +25,15 @@ def scrape(year, week, save_location="projections_{year}_{week}_sportsline.csv")
     page = requests.get(url)
     soup = BeautifulSoup(page.text, 'html.parser')
 
-    table = soup.find("table")
+    tables = soup.find_all("table")
+    
+    if len(tables) != 1:
+        raise Exception("Expected one table, page has {num} tables".format(num=len(tables)))
     
     # Convert to DataFrame
-    df = util_scripts.get_dataframe_from_simple_table(table)
+    html_table = str(tables[0])
+    
+    df = pd.read_html(html_table)[0]
     
     # Save to CSV
     df.to_csv(path_or_buf=save_location.format(year=year, week=week), index=False, na_rep='-')
