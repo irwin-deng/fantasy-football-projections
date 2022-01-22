@@ -5,12 +5,14 @@ Description: Downloads Fantasy Football projections from SportsLine
 
 import requests
 import pandas as pd
-import util_scripts
 from bs4 import BeautifulSoup
 import time
 
+import util_scripts
+importlib.reload(util_scripts)
 
-def scrape(year, week, save_location="projections_{year}_{week}_footballguys.csv"):
+
+def scrape(year, week, save_path="projections_{year}_{week}_footballguys.csv"):
     """
     scrapes projections from FootballGuys
 
@@ -43,7 +45,7 @@ def scrape(year, week, save_location="projections_{year}_{week}_footballguys.csv
     # Save to CSV
     from functools import reduce
     df = reduce(lambda df1,df2: pd.merge(df1,df2,how="outer"), [qb_df, rec_df, k_df, td_df, idp_df])
-    df.to_csv(path_or_buf=save_location.format(year=year, week=week), index=False, na_rep='-')
+    df.to_csv(path_or_buf=save_path.format(year=year, week=week), index=False, na_rep='-')
     
     return df
 
