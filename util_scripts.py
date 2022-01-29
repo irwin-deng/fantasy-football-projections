@@ -3,11 +3,12 @@ File: util_scripts.py
 Description: Misc functions for performing useful tasks
 """
 import pandas as pd
+import bs4
 
-def read_raw_html_table(table):
+def read_raw_html_table(table: bs4.element.Tag):
     """
     :param table: HTML table represented as a BeautifulSoup object
-    :return: A DataFrame corresponding to the HTML table
+    :return: A DataFrame in which entries are BeautifulSoup objects
     """ 
     
     # Get headers
@@ -108,3 +109,41 @@ def get_dataframe_from_table_tr_headers(table):
     # Convert to DataFrame and return
     df = pd.DataFrame(rows, columns=headers)
     return df
+
+def get_team_name_from_abbreviation(abbreviation):
+    abbreviations = {
+                        "ARI": "Cardinals", "ARZ": "Cardinals",
+                        "ATL": "Falcons",
+                        "BAL": "Ravens",
+                        "BUF": "Bills",
+                        "CAR": "Panthers",
+                        "CHI": "Bears",
+                        "CIN": "Bengals",
+                        "CLE": "Browns", "CLV": "Browns",
+                        "DAL": "Cowboys",
+                        "DEN": "Broncos",
+                        "DET": "Lions",
+                        "GNB": "Packers", "GB": "Packers",
+                        "HOU": "Texans", "HST": "Texans",
+                        "IND": "Colts",
+                        "JAX": "Jaguars", "JAC": "Jaguars",
+                        "KAN": "Chiefs",
+                        "LVR": "Raiders", "LV": "Raiders", "OAK": "Raiders",
+                        "LAC": "Chargers", "SDG": "Chargers", "SD": "Chargers",
+                        "LAR": "Rams", "STL": "Rams",
+                        "MIA": "Dolphins",
+                        "MIN": "Vikings",
+                        "NWE": "Patriots", "NE": "Patriots", 
+                        "NOR": "Saints", "NO": "Saints",
+                        "NYG": "Giants",
+                        "NYJ": "Jets",
+                        "PHI": "Eagles",
+                        "PIT": "Steelers",
+                        "SFO": "49ers", "SF": "49ers",
+                        "SEA": "Seahawks",
+                        "TAM": "Buccaneers", "TB": "Buccaneers",
+                        "TEN": "Titans",
+                        "WAS": "Football Team"
+                    }
+
+    return abbreviations[abbreviation]
