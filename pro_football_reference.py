@@ -18,6 +18,7 @@ import re
 import util_scripts
 importlib.reload(util_scripts)
 
+
 def scrape(year, week, webdriver,
            save_path="historical_{year}_{week}_pro-football-reference.csv"):
     """
@@ -37,14 +38,14 @@ def scrape(year, week, webdriver,
     time.sleep(6 + random.uniform(0, 4))
     soup = BeautifulSoup(page.text, 'html.parser')
 
-    games_html = soup.find("div", {"class":"game_summaries"})
-    games_html = games_html.find_all("div", {"class":"game_summary"})
+    games_html = soup.find("div", {"class": "game_summaries"})
+    games_html = games_html.find_all("div", {"class": "game_summary"})
     base_url = "https://www.pro-football-reference.com"
 
     game_urls = []
 
     for game_html in games_html:
-        game_element = game_html.find("td", {"class":"gamelink"})
+        game_element = game_html.find("td", {"class": "gamelink"})
         path = game_element.find("a")["href"]
         game_urls.append(base_url + path)
 
@@ -79,7 +80,7 @@ def scrape(year, week, webdriver,
         idp_df.insert(loc=3, column="Pos",
                       value=idp_df["ID"].map(player_pos_dict))
         kick_df.insert(loc=3, column="Pos",
-                      value=kick_df["ID"].map(player_pos_dict))
+                       value=kick_df["ID"].map(player_pos_dict))
         ret_df.insert(loc=3, column="Pos",
                       value=ret_df["ID"].map(player_pos_dict))
 
@@ -101,10 +102,14 @@ def scrape(year, week, webdriver,
     df.to_csv(path_or_buf=save_path, index=False)
     print(f"Year {year}, week {week} saved to {save_path}")
 
+
 def _get_offense_stats(soup):
-    stats_df = _parse_pfr_table(
-            table=soup.find("table", {"id": "player_offense"}))
-    stats_df.name = "Offense Stats"
+    """
+    Gets offensive player stats
+
+    :param soup: BeautifulSoup representation of the page
+    :return: DataFrame of each offensive player's stats
+    """
 
     labels = {"_Player": "Name", "ID": "ID", "_Tm": "Team",
               "Passing_Cmp": "Pass Comp", "Passing_Att": "Pass Att",
@@ -118,16 +123,24 @@ def _get_offense_stats(soup):
               "Receiving_TD": "Rec Td", "Receiving_Lng": "Rec Long",
               "Fumbles_Fmb": "Off Fum", "Fumbles_FL": "Off Fum Lost"}
 
+    off_table = soup.find("table", {"id": "player_offense"})
+    stats_df = _parse_pfr_table(table=off_table)
+    stats_df.name = "Offense Stats"
+
     stats_df = util_scripts.set_df_headers(df=stats_df, labels=labels,
                                            check=True, check_order=True)
 
     return stats_df
 
-def _get_idp_stats(soup):
-    stats_df = _parse_pfr_table(
-            table=soup.find("table", {"id": "player_defense"}))
-    stats_df.name = "IDP Stats"
 
+def _get_idp_stats(soup):
+    """
+    Gets defensive player stats
+
+    :param soup: BeautifulSoup representation of the page
+    :return: DataFrame of each defensive player's stats
+    """
+    
     labels = {"_Player": "Name", "ID": "ID", "_Tm": "Team",
               "Def Interceptions_Int": "Def Int",
               "Def Interceptions_Yds": "Def Int Yd",
@@ -140,15 +153,23 @@ def _get_idp_stats(soup):
               "Fumbles_FR": "Def Fum Rec", "Fumbles_Yds": "Def Fum Yd",
               "Fumbles_TD": "Def Fum Td", "Fumbles_FF": "Def FF"}
 
+    idp_table = soup.find("table", {"id": "player_defense"})
+    stats_df = _parse_pfr_table(table=idp_table)
+    stats_df.name = "IDP Stats"
+
     stats_df = util_scripts.set_df_headers(df=stats_df, labels=labels,
                                            check=True, check_order=True)
 
     return stats_df
 
+
 def _get_ret_stats(soup):
-    stats_df = _parse_pfr_table(
-            table=soup.find("table", {"id": "returns"}))
-    stats_df.name = "Return Stats"
+    """
+    Gets kick and punt return stats
+
+    :param soup: BeautifulSoup representation of the page
+    :return: DataFrame of each returner's stats (may be empty)
+    """
 
     labels = {"_Player": "Name", "ID": "ID", "_Tm": "Team",
               "Kick Returns_Rt": "KR", "Kick Returns_Yds": "KR Yd",
@@ -157,15 +178,28 @@ def _get_ret_stats(soup):
               "Punt Returns_Yds": "PR Yd", "Punt Returns_Y/R": "PR Avg",
               "Punt Returns_TD": "PR Td", "Punt Returns_Lng": "PR Long"}
 
-    stats_df = util_scripts.set_df_headers(df=stats_df, labels=labels,
-                                           check=True, check_order=True)
+    ret_table = soup.find("table", {"id": "returns"})
 
+    # May not exist (e.g. 2014 NOR vs GNB)
+    if ret_table is None:
+        stats_df = pd.DataFrame(columns=list(labels.keys()))
+    else:
+        stats_df = _parse_pfr_table(table=ret_table)
+
+        stats_df = util_scripts.set_df_headers(df=stats_df, labels=labels,
+                                               check=True, check_order=True)
+
+    stats_df.name = "Return Stats"
     return stats_df
 
+
 def _get_kick_stats(soup):
-    stats_df = _parse_pfr_table(
-            table=soup.find("table", {"id": "kicking"}))
-    stats_df.name = "Kicking Stats"
+    """
+    Gets kick and punt stats
+
+    :param soup: BeautifulSoup representation of the page
+    :return: DataFrame of each kicker's stats (may be empty)
+    """
 
     labels = {"_Player": "Name", "ID": "ID", "_Tm": "Team",
               "Scoring_XPM": "XP Made", "Scoring_XPA": "XP Att",
@@ -173,12 +207,23 @@ def _get_kick_stats(soup):
               "Punting_Pnt": "Punt", "Punting_Yds": "Punt Yd",
               "Punting_Y/P": "Punt Avg", "Punting_Lng": "Punt Long"}
 
+    kick_table = soup.find("table", {"id": "kicking"})
+    stats_df = _parse_pfr_table(table=kick_table)
+    stats_df.name = "Kicking Stats"
+
     stats_df = util_scripts.set_df_headers(df=stats_df, labels=labels,
                                            check=True, check_order=True)
 
     return stats_df
 
+
 def _get_team_defense_stats(soup):
+    """
+    Gets team defense stats
+
+    :param soup: BeautifulSoup representation of the page
+    :return: DataFrame of each team's defense stats
+    """
     raw_stats_table = soup.find("table", {"id": "team_stats"})
     raw_stats_df = pd.read_html(str(raw_stats_table))[0]
 
@@ -248,7 +293,7 @@ def _get_team_defense_stats(soup):
 
     # Move name from index to a new column
     stats_df.reset_index(inplace=True)
-    stats_df = stats_df.rename(columns={"index":"Team"})
+    stats_df = stats_df.rename(columns={"index": "Team"})
 
     # Add team name (get from team abbreviation)
     stats_df.insert(loc=0, column="Name", value=list(map(
@@ -257,7 +302,9 @@ def _get_team_defense_stats(soup):
     # Add position
     stats_df.insert(loc=2, column="Pos", value="DST")
 
+    stats_df.name = "DST Stats"
     return stats_df
+
 
 def _get_series(df, header, index=None, reverse=False, new_name=None):
     """
@@ -288,6 +335,7 @@ def _get_series(df, header, index=None, reverse=False, new_name=None):
 
     return series
 
+
 def _reverse_series(series):
     """
     reverses order of data relative to indices. Useful for swapping one team's
@@ -307,11 +355,12 @@ def _reverse_series(series):
     # reverse indices
     indices = indices[::-1]
     
-    # set series index 
+    # set series index
     series = series.set_axis(indices)
     
     # return reversed series
     return series
+
 
 def _get_player_position_dict(soup):
     """
@@ -320,16 +369,17 @@ def _get_player_position_dict(soup):
     :param soup: BeautifulSoup object representing the HTML page
     :return: map of player ID -> position
     """
-    h_roster_table = soup.find("table", {"id": "home_snap_counts"})
-    h_roster_df = _parse_pfr_table(h_roster_table)
+    home_table = soup.find("table", {"id": "home_snap_counts"})
+    home_df = _parse_pfr_table(home_table)
 
-    a_roster_table = soup.find("table", {"id": "vis_snap_counts"})
-    a_roster_df = _parse_pfr_table(a_roster_table)
+    away_table = soup.find("table", {"id": "vis_snap_counts"})
+    away_df = _parse_pfr_table(away_table)
 
-    roster_df = pd.concat([h_roster_df, a_roster_df], axis=0, ignore_index=True)
+    combined_df = pd.concat([home_df, away_df], axis=0, ignore_index=True)
 
-    players_dict = dict(zip(roster_df["ID"], roster_df["_Pos"]))
+    players_dict = dict(zip(combined_df["ID"], combined_df["_Pos"]))
     return players_dict
+
 
 def _parse_pfr_table(table: bs4.element.Tag):
     """
@@ -352,11 +402,15 @@ def _parse_pfr_table(table: bs4.element.Tag):
         else:
             raw_df = raw_df.drop(axis=0, index=index)
 
+    # Add ID column
     raw_df.insert(loc=1, column="ID",
-                  value=raw_df["_Player"].map(lambda tag: tag["data-append-csv"]))
+                  value=raw_df["_Player"].map(
+                      lambda tag: tag["data-append-csv"]))
 
+    # Get unformatted strings from tags
+    # doesn't modify cell if it is already a string (e.g. the ID column)
     plaintext_df = raw_df.applymap(lambda cell: cell.get_text()
-                                    if type(cell) is bs4.element.Tag else cell)
+                                   if type(cell) is bs4.element.Tag else cell)
     plaintext_df = plaintext_df.reset_index(drop=True)
 
     return plaintext_df
