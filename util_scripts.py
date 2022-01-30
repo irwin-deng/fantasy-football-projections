@@ -5,6 +5,44 @@ Description: Misc functions for performing useful tasks
 import pandas as pd
 import bs4
 
+def set_df_headers(df: pd.DataFrame, labels: dict, check:bool=True,
+                   check_order:bool=True):
+    """
+    Renames a DataFrame's columns. If 'check' is True, then it will check
+    that each key in the dict is in the old DataFrame. If 'check_order' is
+    True, then it will check that the order of the keys in dict is the same
+    as the order of the headers in the old DataFrame.
+
+    :param df: The DataFrame whose headers to change
+    :param labels: a dict mapping old headers to new headers
+    :param check: whether to check that all keys in the dict exist in df
+    :param check_order: whether to check that all keys in the dict exist in df
+                and in the same order
+    :return: A DataFrame in which entries are BeautifulSoup objects
+    """ 
+    expected_labels = list(labels.keys())
+    new_labels = list(labels.values())
+    actual_labels = df.columns.values.tolist()
+
+    # Check that the labels have not changed
+    if check_order:
+        if str(expected_labels) != str(actual_labels):
+            raise Exception(f"Expected labels for dataframe {df.name} are"
+                            f"{expected_labels}, got labels {actual_labels}")
+    elif check:
+        if len(expected_labels) != len(actual_labels):
+            raise Exception(f"Expected labels for dataframe {df.name} are"
+                            f"{expected_labels}, got labels {actual_labels}")
+        for indx in range(len(expected_labels)):
+            if expected_labels[indx].upper() not in actual_labels[indx].upper():
+                raise Exception(f"Expected labels for dataframe {df.name} are"
+                              f"{expected_labels}, got labels {actual_labels}")
+
+    # replace labels:
+    df = df.rename(columns=labels)
+
+    return df
+
 def read_raw_html_table(table: bs4.element.Tag):
     """
     :param table: HTML table represented as a BeautifulSoup object
@@ -37,8 +75,19 @@ def read_raw_html_table(table: bs4.element.Tag):
             
             for i in range(len(headers)):
                 headers[i] = headers[i] + "_" + header_row_list[i]
-    #print(headers)
     
+    # Rename duplicate headers
+    header_counts = {}
+    for index in range(len(headers)):
+        header = headers[index]
+
+        if header not in header_counts:
+            header_counts[header] = 1
+        else:
+            count = header_counts[header]
+            new_count = count + 1
+            header_counts[header] = new_count
+            headers[index] = header + str(new_count)
     
     # Get contents
     table_body = table.find("tbody")
@@ -78,7 +127,6 @@ def read_row(row):
             cells_list.append(cell)
             
     return cells_list
-    
 
 def get_dataframe_from_table_tr_headers(table):
     """
