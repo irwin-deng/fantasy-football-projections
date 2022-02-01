@@ -11,7 +11,8 @@ import importlib
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support.expected_conditions import staleness_of
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
 import traceback
 
 import util_scripts
@@ -139,13 +140,14 @@ def _get_team_position_df(year: int, week: int, playoffs: bool, team_indx: int,
     # Try scraping URL
     while True:
         try:
-            min_delay = 2 + random.uniform(0, 1)
+            min_delay = 2 + random.uniform(0, 2)
             current_time = time.time()
             NEXT_REQUEST_TIME = current_time + min_delay
 
             webdriver.get(url)
             WebDriverWait(webdriver, timeout=30).until(
-                staleness_of(webdriver.find_element_by_tag_name("html"))
+                EC.presence_of_element_located((
+                    By.XPATH, "//div[@class='k-grid-header']"))
             )
             break  # continue if successful
         except Exception:  # If unsuccessful, wait and try again
@@ -157,7 +159,7 @@ def _get_team_position_df(year: int, week: int, playoffs: bool, team_indx: int,
     html = webdriver.page_source
     soup = BeautifulSoup(html, 'html.parser')
 
-    # Get headers   
+    # Get headers
     headers_table = soup.find("div", {"class": "k-grid-header"})
     headers_table = headers_table.find("table", {"role": "grid"})  
     headers_df = pd.read_html(str(headers_table))[0]
@@ -165,7 +167,7 @@ def _get_team_position_df(year: int, week: int, playoffs: bool, team_indx: int,
     # Merge multi-level headers if applicable:
     if type(headers_df.columns.values.tolist()[0]) == tuple:
         headers_df.columns = ['_'.join(col)
-                                 for col in headers_df.columns.values]
+                              for col in headers_df.columns.values]
 
     actual_labels = headers_df.columns.values.tolist()
 
