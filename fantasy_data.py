@@ -146,7 +146,7 @@ def _get_team_position_df(year: int, week: int, playoffs: bool, team_indx: int,
 
             webdriver.get(url)
             WebDriverWait(webdriver, timeout=30).until(
-                EC.presence_of_element_located((
+                EC.visibility_of_element_located((
                     By.XPATH, "//div[@class='k-grid-header']"))
             )
             break  # continue if successful
