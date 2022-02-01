@@ -34,6 +34,17 @@ def scrape(year: int, week: int, webdriver: webdriver, playoffs=False,
 
     dfs = []
 
+    # Renumber playoff weeks (to be used when saving the data)
+    if playoffs:
+        if year <= 2020:
+            save_week = week + 17
+        elif year >= 2021:
+            save_week = week + 18
+    else:
+        save_week = week
+
+    print(f"Reading year {year}, week {save_week}...")
+
     # Keeps track of progress to be printed to the console
     ordinal_pos_indx = 1
 
@@ -43,20 +54,21 @@ def scrape(year: int, week: int, webdriver: webdriver, playoffs=False,
         ordinal_pos_indx = ordinal_pos_indx + 1
 
         for team_indx in range(0, 32):
-            df = _get_team_position_df(year=year, week=week, playoffs=playoffs,
-                                       team_indx=team_indx, pos_indx=pos_indx,
-                                       webdriver=webdriver)
-            dfs.append(df)
+            dfs.append(
+                _get_team_position_df(year=year, week=week, playoffs=playoffs,
+                                      team_indx=team_indx, pos_indx=pos_indx,
+                                      webdriver=webdriver)
+            )
         time.sleep(10 + random.uniform(0, 5))
 
     # Save to CSV
-    save_path = save_path.format(year=year, week=week)
+    save_path = save_path.format(year=year, week=save_week)
 
     merged_df = pd.concat(objs=dfs, join="outer")
     merged_df.to_csv(path_or_buf=save_path, index=False, na_rep='-')
-    print(f"Year {year}, week {week} saved to {save_path}\n")
+    print(f"Year {year}, week {save_week} saved to {save_path}\n")
 
-    return df
+    return merged_df
 
 
 def _get_team_position_df(year: int, week: int, playoffs: bool, team_indx: int,
@@ -140,19 +152,20 @@ def _get_team_position_df(year: int, week: int, playoffs: bool, team_indx: int,
     # Try scraping URL
     while True:
         try:
-            min_delay = 2 + random.uniform(0, 2)
+            min_delay = 2 + random.uniform(0, 3)
             current_time = time.time()
             NEXT_REQUEST_TIME = current_time + min_delay
 
             webdriver.get(url)
-            WebDriverWait(webdriver, timeout=30).until(
-                EC.visibility_of_element_located((
-                    By.XPATH, "//div[@class='k-grid-header']"))
-            )
+            element = WebDriverWait(webdriver, timeout=60).until(
+                          EC.visibility_of_element_located((
+                              By.XPATH, "//div[@class='k-grid-header']"))
+                      )
+            time.sleep(1)
             break  # continue if successful
         except Exception:  # If unsuccessful, wait and try again
             print(traceback.format_exc())
-            print("\nWaiting 30 min to retry...\n")
+            print("Waiting 30 min to retry...\n")
             time.sleep(1800)
 
     # Get page contents
@@ -161,7 +174,7 @@ def _get_team_position_df(year: int, week: int, playoffs: bool, team_indx: int,
 
     # Get headers
     headers_table = soup.find("div", {"class": "k-grid-header"})
-    headers_table = headers_table.find("table", {"role": "grid"})  
+    headers_table = headers_table.find("table", {"role": "grid"})
     headers_df = pd.read_html(str(headers_table))[0]
 
     # Merge multi-level headers if applicable:
